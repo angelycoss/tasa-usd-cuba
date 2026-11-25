@@ -21,19 +21,33 @@ def extraer_usd(texto: str):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page()
-        page.goto(URL, wait_until="networkidle", timeout=60000)
-        page.wait_for_timeout(3000)
+        context = browser.new_context(
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+            ),
+            locale="es-ES",
+        )
+        page = context.new_page()
+        respuesta = page.goto(URL, wait_until="networkidle", timeout=60000)
+        page.wait_for_timeout(5000)
         texto = page.inner_text("body")
         valor = extraer_usd(texto)
 
         if valor is None:
+            print("Código HTTP:", respuesta.status if respuesta else "sin respuesta")
+            print("URL final:", page.url)
+            print("Título:", page.title())
+            print("Largo del texto:", len(texto))
+            print("--- PRIMEROS 1500 CARACTERES ---")
+            print(texto[:1500])
             page.screenshot(path="debug.png", full_page=True)
             with open("debug.txt", "w", encoding="utf-8") as f:
                 f.write(texto)
             browser.close()
             print("No se encontró la tasa USD", file=sys.stderr)
             sys.exit(1)
+
         browser.close()
 
     datos = {
